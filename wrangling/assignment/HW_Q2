@@ -1,0 +1,107 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ---------------------------------------------------------
+# 1. Load Excel file
+# ---------------------------------------------------------
+df = pd.read_excel("c:/Users/tiany/Desktop/DS3001/DS3001-SP2/wrangling/data/GSAF5.xls")
+
+# ---------------------------------------------------------
+# 2. Drop empty columns
+# ---------------------------------------------------------
+df = df.dropna(axis=1, how="all")
+
+# ---------------------------------------------------------
+# 3. Clean Year variable
+# ---------------------------------------------------------
+df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
+
+print("Year range:", (df["Year"].min(), df["Year"].max()))
+
+# Filter attacks since 1940
+df_recent = df[df["Year"] >= 1940]
+
+# Plot attacks per year
+attacks_by_year = df_recent.groupby("Year").size()
+attacks_by_year.plot(kind="line", figsize=(10,5))
+plt.title("Shark Attacks per Year Since 1940")
+plt.xlabel("Year")
+plt.ylabel("Number of Attacks")
+plt.show()
+
+# ---------------------------------------------------------
+# 4. Clean Age + Histogram
+# ---------------------------------------------------------
+df["Age"] = pd.to_numeric(df["Age"], errors="coerce")
+
+df["Age"].hist(bins=20, figsize=(8,5))
+plt.title("Histogram of Victim Ages")
+plt.xlabel("Age")
+plt.ylabel("Count")
+plt.show()
+
+# ---------------------------------------------------------
+# 5. Proportion of victims who are male
+# ---------------------------------------------------------
+df["Sex"] = df["Sex"].astype(str).str.upper().str.strip()
+prop_male = (df["Sex"] == "M").mean()
+print("Proportion male:", prop_male)
+
+# ---------------------------------------------------------
+# 6. Clean Type variable
+# ---------------------------------------------------------
+df["Type"] = df["Type"].astype(str).str.title().str.strip()
+
+df["Type"] = df["Type"].replace({
+    "Unprovoked": "Unprovoked",
+    "Provoked": "Provoked"
+})
+
+df["Type"] = df["Type"].where(df["Type"].isin(["Provoked", "Unprovoked"]), "Unknown")
+
+prop_unprovoked = (df["Type"] == "Unprovoked").mean()
+print("Proportion unprovoked:", prop_unprovoked)
+
+# ---------------------------------------------------------
+# 7. Clean Fatal Y/N variable
+# ---------------------------------------------------------
+df["Fatal Y/N"] = df["Fatal Y/N"].astype(str).str.upper().str.strip()
+df["Fatal Y/N"] = df["Fatal Y/N"].replace({"YES": "Y", "NO": "N"})
+df["Fatal Y/N"] = df["Fatal Y/N"].where(df["Fatal Y/N"].isin(["Y", "N"]), "Unknown")
+
+# ---------------------------------------------------------
+# 8. Crosstabs for relationships
+# ---------------------------------------------------------
+
+print("\nUnprovoked vs Sex:")
+print(pd.crosstab(df["Sex"], df["Type"], normalize="index"))
+
+print("\nFatality vs Type:")
+print(pd.crosstab(df["Type"], df["Fatal Y/N"], normalize="index"))
+
+print("\nFatality vs Sex:")
+print(pd.crosstab(df["Sex"], df["Fatal Y/N"], normalize="index"))
+
+# ---------------------------------------------------------
+# 9. Proportion of attacks by white sharks
+# ---------------------------------------------------------
+
+# Clean column names
+df.columns = df.columns.str.strip().str.lower()
+
+# Find the species column automatically
+species_col = None
+for col in df.columns:
+    if "species" in col:
+        species_col = col
+        break
+
+if species_col is None:
+    print("No species column found in this dataset.")
+else:
+    df[species_col] = df[species_col].astype(str)
+    prop_white = df[species_col].str.contains("white", case=False).mean()
+    print("\nProportion involving white sharks:", prop_white)
+
+
